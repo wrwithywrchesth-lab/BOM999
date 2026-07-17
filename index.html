@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบบันทึกเวลาเข้า-ออกงาน</title>
-    <!-- เรียกใช้ฟอนต์ภาษาไทย Prompt -->
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
     
     <style>
@@ -117,6 +116,7 @@
             text-align: center;
             font-size: 0.95rem;
             min-height: 24px;
+            font-weight: 500;
         }
 
         .loading { color: var(--primary-color); }
@@ -155,7 +155,7 @@
     </div>
 
     <script>
-        // === ลบข้อความภาษาไทยด้านล่าง แล้วเอา URL ที่ขึ้นต้นด้วย https://script.google.com/... มาวางในเครื่องหมายคำพูด ===
+        // === วาง URL ของ Google Apps Script ที่ Deploy เป็น "เวอร์ชันใหม่" ลงในช่องนี้ ===
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFYmUkuvYPMpUiIXt2PjXea9Tjd5z6ByiZ6gfYCyKFk6X91HaJxR7-8eXetfW6P6Ipcw/exec";
         
         const form = document.getElementById('attendanceForm');
@@ -165,43 +165,35 @@
         form.addEventListener('submit', e => {
             e.preventDefault(); 
 
-            // 1. ล็อกปุ่มป้องกันการกดซ้ำ และแสดงข้อความกำลังโหลด
+            // เปลี่ยนสถานะปุ่มเป็นกำลังโหลด
             submitBtn.disabled = true;
             submitBtn.innerText = "กำลังประมวลผล...";
             statusMessage.className = "status-message loading";
             statusMessage.innerText = "กำลังเชื่อมต่อกับฐานข้อมูล...";
 
-            // 2. แปลงข้อมูลในฟอร์มให้อยู่ในรูปแบบที่ Google Apps Script เข้าใจได้ 100% (URLSearchParams)
-            const formData = new FormData(form);
-            const data = new URLSearchParams();
-            for (const pair of formData) {
-                data.append(pair[0], pair[1]);
-            }
+            // ใช้ FormData แบบพื้นฐาน ซึ่ง Google Apps Script สามารถอ่านได้แน่นอน
+            const requestBody = new FormData(form);
 
-            // 3. ยิงข้อมูลไปที่ URL ที่ตั้งไว้
+            // ส่งข้อมูลไปยัง SCRIPT_URL
             fetch(SCRIPT_URL, { 
                 method: 'POST', 
-                body: data 
+                body: requestBody 
             })
-            .then(response => response.json()) // รอรับค่า JSON ที่ GAS ส่งกลับมา
-            .then(result => {
-                // บันทึกสำเร็จ
+            .then(response => {
+                // ถ้าได้รับการตอบสนองกลับมา ถือว่าข้อมูลส่งถึงเซิร์ฟเวอร์แล้ว
                 statusMessage.className = "status-message success";
                 statusMessage.innerText = "บันทึกข้อมูลเข้า Sheet เรียบร้อยแล้ว!";
                 form.reset(); 
             })
             .catch(error => {
-                // กรณีมีข้อผิดพลาด (เช่น ใส่ URL ผิด หรือเน็ตหลุด)
                 console.error('Error:', error);
                 statusMessage.className = "status-message error";
                 statusMessage.innerText = "เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่";
             })
             .finally(() => {
-                // คืนค่าปุ่มให้กลับมาเป็นเหมือนเดิม
                 submitBtn.disabled = false;
                 submitBtn.innerText = "บันทึกข้อมูล";
                 
-                // ให้ข้อความสถานะหายไปหลังจาก 5 วินาที
                 setTimeout(() => {
                     statusMessage.innerText = "";
                 }, 5000);
